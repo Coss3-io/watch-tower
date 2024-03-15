@@ -4,6 +4,7 @@ import { apiUrl, chainRPC, ecr20ABI } from "../configs";
 import BN from "bignumber.js";
 import axios from "axios";
 import { signData } from "../services";
+import { matchedData, validationResult } from "express-validator";
 
 export async function get(
   req: Request<
@@ -18,14 +19,22 @@ export async function get(
   res: Response,
   next: Function
 ): Promise<void> {
-  const rpc = chainRPC[req.body.chainId];
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ errors: errors.array() });
+    return;
+  }
+  const data = matchedData(req);
+  const rpc = chainRPC[<keyof typeof chainRPC>data.chainId];
   const provider = new ethers.JsonRpcProvider(rpc);
-  const erc20 = new ethers.Contract(req.body.token, ecr20ABI, provider);
+  const erc20 = new ethers.Contract(data.token, ecr20ABI, provider);
+
   let faultyOrders: { address: string; balance: string }[] = [];
   let promises: Promise<string>[] = [];
   let result: string[] = [];
+
   try {
-    req.body.orders.forEach((order) => {
+    data.orders.forEach((order: { address: string; amount: string }) => {
       promises.push(erc20.balanceOf(order.address));
     });
     result = await Promise.all(promises);
@@ -33,20 +42,22 @@ export async function get(
     console.log(
       "An error occured during balances retrieval from the blockchain"
     );
-    next(e);
+    res.status(400).json({ errors: "An error occured during balances retrieval from the blockchain" });
+    return;
   }
-  for (let i = 0; ++i; i < result.length) {
-    const balance = BN(result[i]);
-    const amount = BN(req.body.orders[i].amount);
 
+  for (let i = 0; i < result.length; ++i) {
+    const balance = BN(result[i]);
+    const amount = BN(data.orders[i].amount);
     if (balance.lt(amount)) {
       faultyOrders.push({
-        address: req.body.orders[i].address,
+        address: data.orders[i].address,
         balance: balance.toFixed(),
       });
     }
   }
 
-  await axios.post(apiUrl, signData({ orders: faultyOrders }));
+  if (faultyOrders.length)
+    await axios.post(apiUrl, signData({ orders: faultyOrders }));
   res.json(faultyOrders);
 }

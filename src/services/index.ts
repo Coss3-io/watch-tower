@@ -1,6 +1,7 @@
 import { createHmac } from "crypto";
 import { ethers } from "ethers";
 import { APIKEY } from "../configs";
+import { WRONG_ORDERS } from "../configs/messages";
 
 export function verifyBalances(
   order: { address: string; amount: number }[],
@@ -11,22 +12,30 @@ export function verifyBalances(
 }
 
 export function validateAddress(address: string): boolean {
-  return !!ethers.getAddress(address.toLowerCase());
+  try {
+    !!ethers.getAddress(address.toLowerCase());
+    return true;
+  } catch (e: any) {
+    throw new Error("Wrong address sent");
+  }
 }
-
 export function validateOrders(orders: Array<any>): boolean {
+  if (!orders || !orders.length) return false;
+
   orders.forEach((order) => {
     if (typeof order !== "object") {
       throw new Error("Wrong order format");
     } else {
       if (!order.amount) {
-        throw new Error("Missing an order amount");
-      } else if (!order.token) {
-        throw new Error("Missing an order token");
+        throw new Error(WRONG_ORDERS);
+      } else if (!order.address) {
+        throw new Error(WRONG_ORDERS);
       }
 
-      validateAddress(order.token);
-      parseInt(order.amount);
+      validateAddress(order.address);
+      if (!parseInt(order.amount)) {
+        throw new Error(WRONG_ORDERS);
+      }
     }
   });
   return true;
