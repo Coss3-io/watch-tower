@@ -18,7 +18,7 @@ import axios from "axios";
 /**
  * @notice Class used to inspect the blockchain events and send the data to the api
  */
-export class inspector {
+export class Inspector {
   private tradeLock = false;
   private stackLock = false;
   private provider;
@@ -50,7 +50,7 @@ export class inspector {
       const block = await this.getLastBlock("trade");
       const lastBlock = Math.min(
         Number((await this.provider.getBlock("latest"))?.number),
-        block + 5000
+        block + 4000
       );
 
       const [tradeEvents, cancelEvents] = await Promise.all([
@@ -103,7 +103,7 @@ export class inspector {
       const block = await this.getLastBlock("stacking");
       const lastBlock = Math.min(
         Number((await this.provider.getBlock("latest"))?.number),
-        block + 5000
+        block + 4000
       );
 
       const [

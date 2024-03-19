@@ -7,22 +7,18 @@ export const APIKEY = "";
 
 export const chainRPC = {
   "56": "https://binance.llamarpc.com",
-  "57": "https://binance.llamarpc.com",
 };
 
 export const dexContract: { [key in keyof typeof chainRPC]: string } = {
-  "56": "g",
-  "57": "g",
+  "56": "0x4BBEEB066ED09B7AeD07bf39eEE0460DFA261525",
 } as const;
 
 export const stackingContract: { [key in keyof typeof chainRPC]: string } = {
-  "56": "g",
-  "57": "g",
+  "56": "0x4BBEEB066ED09B7AeD07bf39eEE0460DFA261525",
 } as const;
 
 export const genesisBlock: { [key in keyof typeof chainRPC]: number } = {
-  "56": 45,
-  "57": 45,
+  "56": 37100552,
 };
 
 export const erc20ABI = [
@@ -41,6 +37,6 @@ export const dexABI = [
 export const stackingABI = [
   "event NewStackDeposit(uint _slot, uint _amount, address _sender)",
   "event NewStackWithdrawal(uint _slot, uint _amount, address _sender)",
-  "event NewFeesDeposit(uint _slot, uint _amount, ERC20 _token)",
-  "event NewFeesWithdrawal(uint _slot, ERC20[] _tokens, address _sender)",
+  "event NewFeesDeposit(uint _slot, uint _amount, address _token)",
+  "event NewFeesWithdrawal(uint _slot, address[] _tokens, address _sender)",
 ];

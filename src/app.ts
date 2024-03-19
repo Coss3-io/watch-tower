@@ -2,9 +2,20 @@ import express from "express";
 import { router } from "./routes";
 import cron from "node-cron";
 import morgan from "morgan";
+import { Inspector } from "./services/inspector";
+import { chainRPC } from "./configs";
+
+const inspectors: Inspector[] = [];
+
+Object.keys(chainRPC).forEach((chainId) => {
+  inspectors.push(new Inspector(chainId));
+});
 
 cron.schedule("* * * * *", async () => {
-  console.log("cron message");
+  inspectors.forEach((inspector) => {
+    inspector.tradeAnalysis();
+    inspector.stackingAnalysis();
+  });
 });
 
 export const app = express();
