@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { ethers } from "ethers";
-import { apiUrl, chainRPC, ecr20ABI } from "../configs";
+import { apiUrl, chainRPC, erc20ABI } from "../configs";
 import BN from "bignumber.js";
 import axios from "axios";
 import { signData } from "../services";
@@ -27,7 +27,7 @@ export async function get(
   const data = matchedData(req);
   const rpc = chainRPC[<keyof typeof chainRPC>data.chainId];
   const provider = new ethers.JsonRpcProvider(rpc);
-  const erc20 = new ethers.Contract(data.token, ecr20ABI, provider);
+  const erc20 = new ethers.Contract(data.token, erc20ABI, provider);
 
   let faultyOrders: { address: string; balance: string }[] = [];
   let promises: Promise<string>[] = [];
