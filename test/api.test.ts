@@ -23,6 +23,7 @@ const realEthers = jest.requireActual("ethers");
 
 const mockedEthers = ethers as jest.Mocked<typeof ethers>;
 const mockedAxios = axios as jest.Mocked<typeof axios>;
+mockedAxios.post.mockReset();
 mockedAxios.post.mockResolvedValue({});
 
 const rpcMock = jest.fn();
@@ -363,7 +364,6 @@ describe("Checks the working scenarios of the API", () => {
     expect(response.statusCode).toBe(400);
     expect(balanceMock).toHaveBeenCalledWith(token2);
     expect(axios.post).not.toHaveBeenCalled();
-    console.log(response.body);
     expect(response.body).toEqual({
       errors: "An error occured during balances retrieval from the blockchain",
     });

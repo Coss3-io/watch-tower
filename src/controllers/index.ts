@@ -42,7 +42,12 @@ export async function get(
     console.log(
       "An error occured during balances retrieval from the blockchain"
     );
-    res.status(400).json({ errors: "An error occured during balances retrieval from the blockchain" });
+    res
+      .status(400)
+      .json({
+        errors:
+          "An error occured during balances retrieval from the blockchain",
+      });
     return;
   }
 
