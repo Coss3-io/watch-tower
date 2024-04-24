@@ -6,7 +6,7 @@ import axios from "axios";
 import { signData } from "../services";
 import { matchedData, validationResult } from "express-validator";
 
-export async function get(
+export async function post(
   req: Request<
     any,
     any,
@@ -29,7 +29,7 @@ export async function get(
   const provider = new ethers.JsonRpcProvider(rpc);
   const erc20 = new ethers.Contract(data.token, erc20ABI, provider);
 
-  let faultyOrders: { address: string; balance: string }[] = [];
+  let faultyOrders: { [key in string]: string } = {};
   let promises: Promise<string>[] = [];
   let result: string[] = [];
 
@@ -42,12 +42,9 @@ export async function get(
     console.log(
       "An error occured during balances retrieval from the blockchain"
     );
-    res
-      .status(400)
-      .json({
-        errors:
-          "An error occured during balances retrieval from the blockchain",
-      });
+    res.status(400).json({
+      errors: "An error occured during balances retrieval from the blockchain",
+    });
     return;
   }
 
@@ -55,14 +52,14 @@ export async function get(
     const balance = BN(result[i]);
     const amount = BN(data.orders[i].amount);
     if (balance.lt(amount)) {
-      faultyOrders.push({
-        address: data.orders[i].address,
-        balance: balance.toFixed(),
-      });
+      faultyOrders[data.orders[i].address] = balance.toFixed();
     }
   }
 
-  if (faultyOrders.length)
-    await axios.post(apiUrl, signData({ orders: faultyOrders }));
+  if (Object.values(faultyOrders).length)
+    await axios.post(
+      apiUrl,
+      signData({ orders: faultyOrders, token: data.token })
+    );
   res.json(faultyOrders);
 }

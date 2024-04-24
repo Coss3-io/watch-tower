@@ -323,17 +323,17 @@ describe("Checks the working scenarios of the API", () => {
       chainId: chainId,
     });
 
-    const faultyOrders = [
-      { address: token2, balance: "56" },
-      { address: token3, balance: "39" },
-    ];
+    const faultyOrders = {
+      [token2]: "56",
+      [token3]: "39",
+    }
 
     expect(response.statusCode).toBe(200);
     expect(balanceMock).toHaveBeenNthCalledWith(1, token2);
     expect(balanceMock).toHaveBeenNthCalledWith(2, token3);
     expect(axios.post).toHaveBeenCalledWith(
       apiUrl,
-      signData({ orders: faultyOrders })
+      signData({ orders: faultyOrders, token: token })
     );
     expect(response.body).toEqual(faultyOrders);
   });

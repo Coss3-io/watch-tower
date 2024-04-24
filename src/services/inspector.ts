@@ -92,7 +92,7 @@ export class Inspector {
             errors.push({
               path: path,
               method: "post",
-              chainId: this.chainId,
+              chain_id: this.chainId,
               ...data,
             });
           }
@@ -101,7 +101,11 @@ export class Inspector {
 
       cancelEvents.forEach(async (cancelEvent) => {
         if ("args" in cancelEvent) {
-          const data = { orderHash: cancelEvent.args[0] };
+          const data = {
+            orderHash: cancelEvent.args[0],
+            baseToken: cancelEvent.args[1],
+            quoteToken: cancelEvent.args[2],
+          };
           const path = apiUrl + watchTowerPath;
           const response = await axios.delete(apiUrl + watchTowerPath, {
             data: data,
@@ -111,7 +115,7 @@ export class Inspector {
             errors.push({
               path: path,
               method: "delete",
-              chainId: this.chainId,
+              chain_id: this.chainId,
               ...data,
             });
           }
@@ -119,7 +123,7 @@ export class Inspector {
       });
       await this.saveLastBlock(lastBlock, "trade");
     } catch (e: any) {
-      console.log(
+      console.error(
         `${new Date().toISOString()}: An error occured while trying to fetch the trade details ${e}`
       );
     } finally {
@@ -180,7 +184,6 @@ export class Inspector {
             errors.push({
               path: path,
               method: "post",
-              chainId: this.chainId,
               ...data,
             });
           }
@@ -203,7 +206,6 @@ export class Inspector {
             errors.push({
               path: path,
               method: "post",
-              chainId: this.chainId,
               ...data,
             });
           }
@@ -224,7 +226,6 @@ export class Inspector {
             errors.push({
               path: path,
               method: "post",
-              chainId: this.chainId,
               ...data,
             });
           }
@@ -247,7 +248,6 @@ export class Inspector {
               errors.push({
                 path: path,
                 method: "post",
-                chainId: this.chainId,
                 ...data,
               });
             }

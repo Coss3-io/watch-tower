@@ -1,5 +1,5 @@
 import express from "express";
-import { get } from "../controllers";
+import { post } from "../controllers";
 import { body } from "express-validator";
 import { validateAddress, validateOrders } from "../services";
 import { chainRPC } from "../configs";
@@ -40,5 +40,5 @@ router.post(
     .withMessage(CHAINID_INT)
     .custom((value) => String(value) in chainRPC)
     .withMessage(CHAINID_VALID),
-  get
+  post
 );

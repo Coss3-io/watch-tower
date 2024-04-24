@@ -449,4 +449,555 @@ describe("Testing the inspector general behaviour", () => {
     );
     expect(appendFileMock).not.toHaveBeenCalled();
   });
+
+  test("Checks the trade blockchain errors are handled well", async () => {
+    const inspector = new Inspector(chainId);
+    const initialBlock = 45;
+
+    readFileMock.mockReturnValue(initialBlock);
+    getBlockMock.mockReturnValue(new Promise((r, e) => e("Error")));
+
+    await inspector.tradeAnalysis();
+
+    expect(writeFileMock).not.toHaveBeenCalled();
+    expect(appendFileMock).not.toHaveBeenCalled();
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+    expect(mockedAxios.delete).not.toHaveBeenCalled();
+  });
+
+  test("Checks the new trade send to api errors are handled well", async () => {
+    const inspector = new Inspector(chainId);
+    const initialBlock = 45;
+    const actualBlock = 75;
+    const trade1 = {
+      blockNumber: 78,
+      args: ["taker", "orderHash", "amount", "fees", "base_fees", "is_buyer"],
+    };
+    const trade2 = {
+      blockNumber: 79,
+      args: ["taker", "orderHash", "amount", "fees", "base_fees", "is_buyer"],
+    };
+    const cancel1 = { args: ["orderHash"] };
+    const cancel2 = { args: ["orderHash"] };
+
+    readFileMock.mockReturnValue(initialBlock);
+    getBlockMock.mockReturnValue(
+      new Promise((r) => r({ number: actualBlock }))
+    );
+    filterMock.mockReturnValueOnce([trade1, trade2]);
+    filterMock.mockReturnValueOnce([]);
+    mockedAxios.post.mockReturnValueOnce(<Promise<unknown>>(
+      (<unknown>{ status: axios.HttpStatusCode.ServiceUnavailable })
+    ));
+    mockedAxios.post.mockReturnValueOnce(<Promise<unknown>>(<unknown>{
+      status: axios.HttpStatusCode.ServiceUnavailable,
+    }));
+    await inspector.tradeAnalysis();
+
+    expect(appendFileMock).toHaveBeenCalledWith(
+      `blocks/trade/errors.log`,
+      JSON.stringify([
+        {
+          path: apiUrl + watchTowerPath,
+          method: "post",
+          chain_id: chainId,
+          taker: trade1.args[0],
+          block: trade1.blockNumber,
+          trades: {
+            [trade1.args[1]]: {
+              amount: trade1.args[2],
+              fees: trade1.args[3],
+              base_fees: trade1.args[4],
+              is_buyer: !trade1.args[5],
+            },
+          },
+        },
+        {
+          path: apiUrl + watchTowerPath,
+          method: "post",
+          chain_id: chainId,
+          taker: trade2.args[0],
+          block: trade2.blockNumber,
+          trades: {
+            [trade2.args[1]]: {
+              amount: trade2.args[2],
+              fees: trade2.args[3],
+              base_fees: trade2.args[4],
+              is_buyer: !trade2.args[5],
+            },
+          },
+        },
+      ]) + "\n"
+    );
+  });
+
+  test("Checks the new trade & cancel send to api errors are handled well", async () => {
+    const inspector = new Inspector(chainId);
+    const initialBlock = 45;
+    const actualBlock = 75;
+    const trade1 = {
+      blockNumber: 78,
+      args: ["taker", "orderHash", "amount", "fees", "base_fees", "is_buyer"],
+    };
+    const trade2 = {
+      blockNumber: 79,
+      args: ["taker", "orderHash", "amount", "fees", "base_fees", "is_buyer"],
+    };
+    const cancel1 = { args: ["orderHash"] };
+    const cancel2 = { args: ["orderHash"] };
+
+    readFileMock.mockReturnValue(initialBlock);
+    getBlockMock.mockReturnValue(
+      new Promise((r) => r({ number: actualBlock }))
+    );
+    filterMock.mockReturnValueOnce([trade1, trade2]);
+    filterMock.mockReturnValueOnce([cancel1, cancel2]);
+    mockedAxios.post.mockReturnValue(<Promise<unknown>>(
+      (<unknown>{ status: axios.HttpStatusCode.ServiceUnavailable })
+    ));
+    mockedAxios.delete.mockReturnValue(<Promise<unknown>>(<unknown>{
+      status: axios.HttpStatusCode.ServiceUnavailable,
+    }));
+    await inspector.tradeAnalysis();
+
+    expect(appendFileMock).toHaveBeenCalledWith(
+      `blocks/trade/errors.log`,
+      JSON.stringify([
+        {
+          path: apiUrl + watchTowerPath,
+          method: "post",
+          chain_id: chainId,
+          taker: trade1.args[0],
+          block: trade1.blockNumber,
+          trades: {
+            [trade1.args[1]]: {
+              amount: trade1.args[2],
+              fees: trade1.args[3],
+              base_fees: trade1.args[4],
+              is_buyer: !trade1.args[5],
+            },
+          },
+        },
+        {
+          path: apiUrl + watchTowerPath,
+          method: "post",
+          chain_id: chainId,
+          taker: trade2.args[0],
+          block: trade2.blockNumber,
+          trades: {
+            [trade2.args[1]]: {
+              amount: trade2.args[2],
+              fees: trade2.args[3],
+              base_fees: trade2.args[4],
+              is_buyer: !trade2.args[5],
+            },
+          },
+        },
+        {
+          path: apiUrl + watchTowerPath,
+          method: "delete",
+          chain_id: chainId,
+          orderHash: cancel1.args[0],
+        },
+        {
+          path: apiUrl + watchTowerPath,
+          method: "delete",
+          chain_id: chainId,
+          orderHash: cancel2.args[0],
+        },
+      ]) + "\n"
+    );
+  });
+
+  test("Checks stacking blockchain errors are handled well", async () => {
+    const inspector = new Inspector(chainId);
+    const initialBlock = 45;
+
+    readFileMock.mockReturnValue(initialBlock);
+    getBlockMock.mockReturnValue(new Promise((r, e) => e("Error")));
+
+    await inspector.stackingAnalysis();
+
+    expect(writeFileMock).not.toHaveBeenCalled();
+    expect(appendFileMock).not.toHaveBeenCalled();
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+    expect(mockedAxios.delete).not.toHaveBeenCalled();
+  });
+
+  test("Checks stacking entry new stacking api errors are handled well", async () => {
+    const inspector = new Inspector(chainId);
+    const initialBlock = 46;
+    const actualBlock = 76;
+
+    const deposit1 = {
+      blockNumber: 78,
+      args: ["45", "2345743", "deposit1Address"],
+    };
+    const deposit2 = {
+      blockNumber: 78,
+      args: ["slot", "amount", "deposit2Address"],
+    };
+
+    readFileMock.mockReturnValue(initialBlock);
+    getBlockMock.mockReturnValue(
+      new Promise((r) => r({ number: actualBlock }))
+    );
+    mockedAxios.post.mockReturnValue(<Promise<unknown>>(
+      (<unknown>{ status: axios.HttpStatusCode.ServiceUnavailable })
+    ));
+    filterMock.mockReturnValueOnce([deposit1, deposit2]); //stack deposit
+    filterMock.mockReturnValueOnce([]); //stack withdraw
+    filterMock.mockReturnValueOnce([]); // fee deposit
+    filterMock.mockReturnValueOnce([]);
+
+    await inspector.stackingAnalysis();
+    expect(appendFileMock).toHaveBeenCalledWith(
+      `blocks/stacking/errors.log`,
+      JSON.stringify([
+        {
+          path: apiUrl + stackingPath,
+          method: "post",
+          address: deposit1.args[2],
+          withdraw: false,
+          amount: deposit1.args[1],
+          slot: deposit1.args[0],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingPath,
+          method: "post",
+          address: deposit2.args[2],
+          withdraw: false,
+          amount: deposit2.args[1],
+          slot: deposit2.args[0],
+          chain_id: parseInt(chainId),
+        },
+      ]) + "\n"
+    );
+  });
+
+  test("Checks stacking entry new stacking & deposit api errors are handled well", async () => {
+    const inspector = new Inspector(chainId);
+    const initialBlock = 46;
+    const actualBlock = 76;
+
+    const deposit1 = {
+      blockNumber: 78,
+      args: ["45", "2345743", "deposit1Address"],
+    };
+    const deposit2 = {
+      blockNumber: 78,
+      args: ["slot", "amount", "deposit2Address"],
+    };
+
+    const withdraw1 = {
+      blockNumber: 79,
+      args: ["45", "2345743", "withdraw1Address"],
+    };
+    const withdraw2 = {
+      blockNumber: 788,
+      args: ["slot", "amount", "withdraw2Address"],
+    };
+
+    readFileMock.mockReturnValue(initialBlock);
+    getBlockMock.mockReturnValue(
+      new Promise((r) => r({ number: actualBlock }))
+    );
+    mockedAxios.post.mockReturnValue(<Promise<unknown>>(
+      (<unknown>{ status: axios.HttpStatusCode.ServiceUnavailable })
+    ));
+    filterMock.mockReturnValueOnce([deposit1, deposit2]); //stack deposit
+    filterMock.mockReturnValueOnce([withdraw1, withdraw2]); //stack withdraw
+    filterMock.mockReturnValueOnce([]); // fee deposit
+    filterMock.mockReturnValueOnce([]);
+
+    await inspector.stackingAnalysis();
+    expect(appendFileMock).toHaveBeenCalledWith(
+      `blocks/stacking/errors.log`,
+      JSON.stringify([
+        {
+          path: apiUrl + stackingPath,
+          method: "post",
+          address: deposit1.args[2],
+          withdraw: false,
+          amount: deposit1.args[1],
+          slot: deposit1.args[0],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingPath,
+          method: "post",
+          address: deposit2.args[2],
+          withdraw: false,
+          amount: deposit2.args[1],
+          slot: deposit2.args[0],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingPath,
+          method: "post",
+          address: withdraw1.args[2],
+          withdraw: true,
+          amount: withdraw1.args[1],
+          slot: withdraw1.args[0],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingPath,
+          method: "post",
+          address: withdraw2.args[2],
+          withdraw: true,
+          amount: withdraw2.args[1],
+          slot: withdraw2.args[0],
+          chain_id: parseInt(chainId),
+        },
+      ]) + "\n"
+    );
+  });
+
+  test("Checks stacking entry new stacking & deposit & fees deposit api errors are handled well", async () => {
+    const inspector = new Inspector(chainId);
+    const initialBlock = 46;
+    const actualBlock = 76;
+
+    const deposit1 = {
+      blockNumber: 78,
+      args: ["45", "2345743", "deposit1Address"],
+    };
+    const deposit2 = {
+      blockNumber: 78,
+      args: ["slot", "amount", "deposit2Address"],
+    };
+
+    const withdraw1 = {
+      blockNumber: 79,
+      args: ["45", "2345743", "withdraw1Address"],
+    };
+    const withdraw2 = {
+      blockNumber: 788,
+      args: ["slot", "amount", "withdraw2Address"],
+    };
+    const fees1 = {
+      blockNumber: 781,
+      args: ["slot1", "feesAmount1", "feesToken1"],
+    };
+    const fees2 = {
+      blockNumber: 784,
+      args: ["slot2", "feesAmount2", "feesToken2"],
+    };
+
+    readFileMock.mockReturnValue(initialBlock);
+    getBlockMock.mockReturnValue(
+      new Promise((r) => r({ number: actualBlock }))
+    );
+    mockedAxios.post.mockReturnValue(<Promise<unknown>>(
+      (<unknown>{ status: axios.HttpStatusCode.ServiceUnavailable })
+    ));
+    filterMock.mockReturnValueOnce([deposit1, deposit2]); //stack deposit
+    filterMock.mockReturnValueOnce([withdraw1, withdraw2]); //stack withdraw
+    filterMock.mockReturnValueOnce([fees1, fees2]); // fee deposit
+    filterMock.mockReturnValueOnce([]);
+
+    await inspector.stackingAnalysis();
+    expect(appendFileMock).toHaveBeenCalledWith(
+      `blocks/stacking/errors.log`,
+      JSON.stringify([
+        {
+          path: apiUrl + stackingPath,
+          method: "post",
+          address: deposit1.args[2],
+          withdraw: false,
+          amount: deposit1.args[1],
+          slot: deposit1.args[0],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingPath,
+          method: "post",
+          address: deposit2.args[2],
+          withdraw: false,
+          amount: deposit2.args[1],
+          slot: deposit2.args[0],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingPath,
+          method: "post",
+          address: withdraw1.args[2],
+          withdraw: true,
+          amount: withdraw1.args[1],
+          slot: withdraw1.args[0],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingPath,
+          method: "post",
+          address: withdraw2.args[2],
+          withdraw: true,
+          amount: withdraw2.args[1],
+          slot: withdraw2.args[0],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingFeesPath,
+          method: "post",
+          slot: fees1.args[0],
+          token: fees1.args[2],
+          amount: fees1.args[1],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingFeesPath,
+          method: "post",
+          slot: fees2.args[0],
+          token: fees2.args[2],
+          amount: fees2.args[1],
+          chain_id: parseInt(chainId),
+        },
+      ]) + "\n"
+    );
+  });
+
+  test("Checks stacking entry new stacking & deposit & fees deposit api errors are handled well", async () => {
+    const inspector = new Inspector(chainId);
+    const initialBlock = 46;
+    const actualBlock = 76;
+
+    const deposit1 = {
+      blockNumber: 78,
+      args: ["45", "2345743", "deposit1Address"],
+    };
+    const deposit2 = {
+      blockNumber: 78,
+      args: ["slot", "amount", "deposit2Address"],
+    };
+
+    const withdraw1 = {
+      blockNumber: 79,
+      args: ["45", "2345743", "withdraw1Address"],
+    };
+    const withdraw2 = {
+      blockNumber: 788,
+      args: ["slot", "amount", "withdraw2Address"],
+    };
+    const fees1 = {
+      blockNumber: 781,
+      args: ["slot1", "feesAmount1", "feesToken1"],
+    };
+    const fees2 = {
+      blockNumber: 784,
+      args: ["slot2", "feesAmount2", "feesToken2"],
+    };
+    const fees1W = {
+      blockNumber: 7811,
+      args: ["slot1", "address1", ["feesToken11", "feesToken12"]],
+    };
+    const fees2W = {
+      blockNumber: 7842,
+      args: ["slot2", "address2", ["feesToken21", "feesToken22"]],
+    };
+
+    readFileMock.mockReturnValue(initialBlock);
+    getBlockMock.mockReturnValue(
+      new Promise((r) => r({ number: actualBlock }))
+    );
+    mockedAxios.post.mockReturnValue(<Promise<unknown>>(
+      (<unknown>{ status: axios.HttpStatusCode.ServiceUnavailable })
+    ));
+    filterMock.mockReturnValueOnce([deposit1, deposit2]); //stack deposit
+    filterMock.mockReturnValueOnce([withdraw1, withdraw2]); //stack withdraw
+    filterMock.mockReturnValueOnce([fees1, fees2]); // fee deposit
+    filterMock.mockReturnValueOnce([fees1W, fees2W]);
+
+    await inspector.stackingAnalysis();
+    expect(appendFileMock).toHaveBeenCalledWith(
+      `blocks/stacking/errors.log`,
+      JSON.stringify([
+        {
+          path: apiUrl + stackingPath,
+          method: "post",
+          address: deposit1.args[2],
+          withdraw: false,
+          amount: deposit1.args[1],
+          slot: deposit1.args[0],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingPath,
+          method: "post",
+          address: deposit2.args[2],
+          withdraw: false,
+          amount: deposit2.args[1],
+          slot: deposit2.args[0],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingPath,
+          method: "post",
+          address: withdraw1.args[2],
+          withdraw: true,
+          amount: withdraw1.args[1],
+          slot: withdraw1.args[0],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingPath,
+          method: "post",
+          address: withdraw2.args[2],
+          withdraw: true,
+          amount: withdraw2.args[1],
+          slot: withdraw2.args[0],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingFeesPath,
+          method: "post",
+          slot: fees1.args[0],
+          token: fees1.args[2],
+          amount: fees1.args[1],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingFeesPath,
+          method: "post",
+          slot: fees2.args[0],
+          token: fees2.args[2],
+          amount: fees2.args[1],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingFeesWithdrawalPath,
+          method: "post",
+          slot: fees1W.args[0],
+          address: fees1W.args[1],
+          token: fees1W.args[2][0],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingFeesWithdrawalPath,
+          method: "post",
+          slot: fees1W.args[0],
+          address: fees1W.args[1],
+          token: fees1W.args[2][1],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingFeesWithdrawalPath,
+          method: "post",
+          slot: fees2W.args[0],
+          address: fees2W.args[1],
+          token: fees2W.args[2][0],
+          chain_id: parseInt(chainId),
+        },
+        {
+          path: apiUrl + stackingFeesWithdrawalPath,
+          method: "post",
+          slot: fees2W.args[0],
+          address: fees2W.args[1],
+          token: fees2W.args[2][1],
+          chain_id: parseInt(chainId),
+        },
+      ]) + "\n"
+    );
+  });
 });
