@@ -91,8 +91,8 @@ describe("Testing the inspector general behaviour", () => {
       blockNumber: 79,
       args: ["taker", "orderHash", "amount", "fees", "base_fees", "is_buyer"],
     };
-    const cancel1 = { args: ["orderHash"] };
-    const cancel2 = { args: ["orderHash"] };
+    const cancel1 = { args: ["orderHash", "baseToken", "quoteToken"] };
+    const cancel2 = { args: ["orderHash", "baseToken", "quoteToken"] };
 
     readFileMock.mockReturnValue(initialBlock);
     getBlockMock.mockReturnValue(
@@ -158,14 +158,22 @@ describe("Testing the inspector general behaviour", () => {
       1,
       apiUrl + watchTowerPath,
       {
-        data: { orderHash: cancel1.args[0] },
+        data: {
+          orderHash: cancel1.args[0],
+          baseToken: cancel1.args[1],
+          quoteToken: cancel1.args[2],
+        },
       }
     );
     expect(mockedAxios.delete).toHaveBeenNthCalledWith(
       2,
       apiUrl + watchTowerPath,
       {
-        data: { orderHash: cancel2.args[0] },
+        data: {
+          orderHash: cancel2.args[0],
+          baseToken: cancel2.args[1],
+          quoteToken: cancel2.args[2],
+        },
       }
     );
 
