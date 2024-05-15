@@ -14,6 +14,7 @@ import {
 } from "../configs";
 import { promises as fs } from "fs";
 import axios from "axios";
+import BigNumber from "bignumber.js";
 
 /**
  * @notice Class used to inspect the blockchain events and send the data to the api
@@ -66,12 +67,14 @@ export class Inspector {
         block + 4000
       );
 
+      if (block == lastBlock) return true
+
       const [tradeEvents, cancelEvents] = await Promise.all([
         this._dexContract.queryFilter("NewTrade", block, lastBlock),
         this._dexContract.queryFilter("Cancel", block, lastBlock),
       ]);
-
-      tradeEvents.forEach(async (tradeEvent) => {
+      
+      const trades = tradeEvents.map(async (tradeEvent) => {
         if ("args" in tradeEvent) {
           const data = {
             taker: tradeEvent.args[0],
@@ -99,10 +102,10 @@ export class Inspector {
         }
       });
 
-      cancelEvents.forEach(async (cancelEvent) => {
+      const cancel = cancelEvents.map(async (cancelEvent) => {
         if ("args" in cancelEvent) {
           const data = {
-            orderHash: cancelEvent.args[0],
+            orderHash: new BigNumber(cancelEvent.args[0]).toString(16),
             baseToken: cancelEvent.args[1],
             quoteToken: cancelEvent.args[2],
           };
@@ -121,12 +124,16 @@ export class Inspector {
           }
         }
       });
+      await Promise.all(trades)
+      await Promise.all(cancel)
       await this.saveLastBlock(lastBlock, "trade");
     } catch (e: any) {
       console.error(
         `${new Date().toISOString()}: An error occured while trying to fetch the trade details ${e}`
       );
     } finally {
+      console.log(errors)
+      console.log("before ")
       await this.writeErrors(errors, "trade");
     }
     this._tradeLock = false;
@@ -148,6 +155,8 @@ export class Inspector {
         block + 4000
       );
 
+      if (block == lastBlock) return true
+
       const [
         stackingDepositEvents,
         stackingWithdrawalEvents,
@@ -168,7 +177,7 @@ export class Inspector {
         ),
       ]);
 
-      stackingDepositEvents.forEach(async (depositEvent) => {
+      const stackingDeposit = stackingDepositEvents.map(async (depositEvent) => {
         if ("args" in depositEvent) {
           const path = apiUrl + stackingPath;
           const data = {
@@ -190,7 +199,7 @@ export class Inspector {
         }
       });
 
-      stackingWithdrawalEvents.forEach(async (withdrawEvent) => {
+      const stackingWithdrawal = stackingWithdrawalEvents.map(async (withdrawEvent) => {
         if ("args" in withdrawEvent) {
           const path = apiUrl + stackingPath;
           const data = {
@@ -212,7 +221,7 @@ export class Inspector {
         }
       });
 
-      feesDepositEvents.forEach(async (feeDepositEvent) => {
+      const feesDeposit = feesDepositEvents.map(async (feeDepositEvent) => {
         if ("args" in feeDepositEvent) {
           const path = apiUrl + stackingFeesPath;
           const data = {
@@ -232,7 +241,7 @@ export class Inspector {
         }
       });
 
-      feesWithdrawalEvents.forEach(async (feesWithdrawalEvent) => {
+      const feesWithdrawal = feesWithdrawalEvents.map(async (feesWithdrawalEvent) => {
         if ("args" in feesWithdrawalEvent) {
           feesWithdrawalEvent.args[2].forEach(async (token: string) => {
             const path = apiUrl + stackingFeesWithdrawalPath;
@@ -254,6 +263,10 @@ export class Inspector {
           });
         }
       });
+      await Promise.all(stackingDeposit)
+      await Promise.all(stackingWithdrawal)
+      await Promise.all(feesDeposit)
+      await Promise.all(feesWithdrawal)
       await this.saveLastBlock(lastBlock, "stacking");
     } catch (e: any) {
       console.error(

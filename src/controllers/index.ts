@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { ethers } from "ethers";
-import { apiUrl, chainRPC, erc20ABI } from "../configs";
+import { apiUrl, chainRPC, erc20ABI, watchTowerVerificationPath } from "../configs";
 import BN from "bignumber.js";
 import axios from "axios";
 import { signData } from "../services";
@@ -58,7 +58,7 @@ export async function post(
 
   if (Object.values(faultyOrders).length)
     await axios.post(
-      apiUrl,
+      apiUrl + watchTowerVerificationPath,
       signData({ orders: faultyOrders, token: data.token })
     );
   res.json(faultyOrders);

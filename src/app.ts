@@ -4,8 +4,10 @@ import cron from "node-cron";
 import morgan from "morgan";
 import { Inspector } from "./services/inspector";
 import { chainRPC } from "./configs";
+import axios from "axios";
 
 const inspectors: Inspector[] = [];
+axios.defaults.validateStatus = status => status >= 200 && status <= 500;
 
 Object.keys(chainRPC).forEach((chainId) => {
   inspectors.push(new Inspector(chainId));
