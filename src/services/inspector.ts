@@ -15,6 +15,7 @@ import {
 import { promises as fs } from "fs";
 import axios from "axios";
 import BigNumber from "bignumber.js";
+import { signData } from ".";
 
 /**
  * @notice Class used to inspect the blockchain events and send the data to the api
@@ -67,13 +68,13 @@ export class Inspector {
         block + 4000
       );
 
-      if (block == lastBlock) return true
+      if (block == lastBlock) return true;
 
       const [tradeEvents, cancelEvents] = await Promise.all([
         this._dexContract.queryFilter("NewTrade", block, lastBlock),
         this._dexContract.queryFilter("Cancel", block, lastBlock),
       ]);
-      
+
       const trades = tradeEvents.map(async (tradeEvent) => {
         if ("args" in tradeEvent) {
           const data = {
@@ -105,14 +106,15 @@ export class Inspector {
       const cancel = cancelEvents.map(async (cancelEvent) => {
         if ("args" in cancelEvent) {
           const data = {
-            orderHash: new BigNumber(cancelEvent.args[0]).toString(16),
+            orderHash: "0x" + new BigNumber(cancelEvent.args[0]).toString(16),
             baseToken: cancelEvent.args[1],
             quoteToken: cancelEvent.args[2],
           };
           const path = apiUrl + watchTowerPath;
           const response = await axios.delete(apiUrl + watchTowerPath, {
-            data: data,
+            data: signData(data),
           });
+          console.log(response.data)
 
           if (response.status != axios.HttpStatusCode.Ok) {
             errors.push({
@@ -124,16 +126,14 @@ export class Inspector {
           }
         }
       });
-      await Promise.all(trades)
-      await Promise.all(cancel)
+      await Promise.all(trades);
+      await Promise.all(cancel);
       await this.saveLastBlock(lastBlock, "trade");
     } catch (e: any) {
       console.error(
         `${new Date().toISOString()}: An error occured while trying to fetch the trade details ${e}`
       );
     } finally {
-      console.log(errors)
-      console.log("before ")
       await this.writeErrors(errors, "trade");
     }
     this._tradeLock = false;
@@ -155,7 +155,7 @@ export class Inspector {
         block + 4000
       );
 
-      if (block == lastBlock) return true
+      if (block == lastBlock) return true;
 
       const [
         stackingDepositEvents,
@@ -177,49 +177,53 @@ export class Inspector {
         ),
       ]);
 
-      const stackingDeposit = stackingDepositEvents.map(async (depositEvent) => {
-        if ("args" in depositEvent) {
-          const path = apiUrl + stackingPath;
-          const data = {
-            address: depositEvent.args[2],
-            withdraw: false,
-            amount: depositEvent.args[1],
-            slot: depositEvent.args[0],
-            chain_id: parseInt(this.chainId),
-          };
+      const stackingDeposit = stackingDepositEvents.map(
+        async (depositEvent) => {
+          if ("args" in depositEvent) {
+            const path = apiUrl + stackingPath;
+            const data = {
+              address: depositEvent.args[2],
+              withdraw: false,
+              amount: depositEvent.args[1],
+              slot: depositEvent.args[0],
+              chain_id: parseInt(this.chainId),
+            };
 
-          const response = await axios.post(path, data);
-          if (response.status != axios.HttpStatusCode.Ok) {
-            errors.push({
-              path: path,
-              method: "post",
-              ...data,
-            });
+            const response = await axios.post(path, data);
+            if (response.status != axios.HttpStatusCode.Ok) {
+              errors.push({
+                path: path,
+                method: "post",
+                ...data,
+              });
+            }
           }
         }
-      });
+      );
 
-      const stackingWithdrawal = stackingWithdrawalEvents.map(async (withdrawEvent) => {
-        if ("args" in withdrawEvent) {
-          const path = apiUrl + stackingPath;
-          const data = {
-            address: withdrawEvent.args[2],
-            withdraw: true,
-            amount: withdrawEvent.args[1],
-            slot: withdrawEvent.args[0],
-            chain_id: parseInt(this.chainId),
-          };
+      const stackingWithdrawal = stackingWithdrawalEvents.map(
+        async (withdrawEvent) => {
+          if ("args" in withdrawEvent) {
+            const path = apiUrl + stackingPath;
+            const data = {
+              address: withdrawEvent.args[2],
+              withdraw: true,
+              amount: withdrawEvent.args[1],
+              slot: withdrawEvent.args[0],
+              chain_id: parseInt(this.chainId),
+            };
 
-          const response = await axios.post(path, data);
-          if (response.status != axios.HttpStatusCode.Ok) {
-            errors.push({
-              path: path,
-              method: "post",
-              ...data,
-            });
+            const response = await axios.post(path, data);
+            if (response.status != axios.HttpStatusCode.Ok) {
+              errors.push({
+                path: path,
+                method: "post",
+                ...data,
+              });
+            }
           }
         }
-      });
+      );
 
       const feesDeposit = feesDepositEvents.map(async (feeDepositEvent) => {
         if ("args" in feeDepositEvent) {
@@ -241,32 +245,34 @@ export class Inspector {
         }
       });
 
-      const feesWithdrawal = feesWithdrawalEvents.map(async (feesWithdrawalEvent) => {
-        if ("args" in feesWithdrawalEvent) {
-          feesWithdrawalEvent.args[2].forEach(async (token: string) => {
-            const path = apiUrl + stackingFeesWithdrawalPath;
-            const data = {
-              slot: feesWithdrawalEvent.args[0],
-              address: feesWithdrawalEvent.args[1],
-              token: token,
-              chain_id: parseInt(this.chainId),
-            };
+      const feesWithdrawal = feesWithdrawalEvents.map(
+        async (feesWithdrawalEvent) => {
+          if ("args" in feesWithdrawalEvent) {
+            feesWithdrawalEvent.args[2].forEach(async (token: string) => {
+              const path = apiUrl + stackingFeesWithdrawalPath;
+              const data = {
+                slot: feesWithdrawalEvent.args[0],
+                address: feesWithdrawalEvent.args[1],
+                token: token,
+                chain_id: parseInt(this.chainId),
+              };
 
-            const response = await axios.post(path, data);
-            if (response.status != axios.HttpStatusCode.Ok) {
-              errors.push({
-                path: path,
-                method: "post",
-                ...data,
-              });
-            }
-          });
+              const response = await axios.post(path, data);
+              if (response.status != axios.HttpStatusCode.Ok) {
+                errors.push({
+                  path: path,
+                  method: "post",
+                  ...data,
+                });
+              }
+            });
+          }
         }
-      });
-      await Promise.all(stackingDeposit)
-      await Promise.all(stackingWithdrawal)
-      await Promise.all(feesDeposit)
-      await Promise.all(feesWithdrawal)
+      );
+      await Promise.all(stackingDeposit);
+      await Promise.all(stackingWithdrawal);
+      await Promise.all(feesDeposit);
+      await Promise.all(feesWithdrawal);
       await this.saveLastBlock(lastBlock, "stacking");
     } catch (e: any) {
       console.error(

@@ -43,9 +43,11 @@ export function validateOrders(orders: Array<any>): boolean {
 
 export function signData(data: object) {
   const hmac = createHmac("sha256", APIKEY);
-  const time = Math.floor(Date.now() / 1000);
+  const time = Math.floor(Date.now());
 
   const timestampedData = { ...data, timestamp: time };
-  hmac.update(JSON.stringify(data));
+  hmac.update(
+    JSON.stringify(timestampedData).split(":").join(": ").split(",").join(", ")
+  );
   return { signature: hmac.digest("hex"), ...timestampedData };
 }

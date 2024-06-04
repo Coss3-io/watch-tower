@@ -15,7 +15,7 @@ import {
   watchTowerPath,
 } from "../src/configs";
 
-const chainId = "56";
+const chainId = "1337";
 jest.mock("axios");
 jest.mock("ethers");
 jest.mock("fs");
@@ -85,14 +85,14 @@ describe("Testing the inspector general behaviour", () => {
     const actualBlock = 75;
     const trade1 = {
       blockNumber: 78,
-      args: ["taker", "orderHash", "amount", "fees", "base_fees", "is_buyer"],
+      args: ["taker", "0x345", "amount", "fees", "base_fees", "is_buyer"],
     };
     const trade2 = {
       blockNumber: 79,
-      args: ["taker", "orderHash", "amount", "fees", "base_fees", "is_buyer"],
+      args: ["taker", "0x346", "amount", "fees", "base_fees", "is_buyer"],
     };
-    const cancel1 = { args: ["orderHash", "baseToken", "quoteToken"] };
-    const cancel2 = { args: ["orderHash", "baseToken", "quoteToken"] };
+    const cancel1 = { args: ["0x345", "baseToken", "quoteToken"] };
+    const cancel2 = { args: ["0x346", "baseToken", "quoteToken"] };
 
     readFileMock.mockReturnValue(initialBlock);
     getBlockMock.mockReturnValue(
@@ -545,14 +545,14 @@ describe("Testing the inspector general behaviour", () => {
     const actualBlock = 75;
     const trade1 = {
       blockNumber: 78,
-      args: ["taker", "orderHash", "amount", "fees", "base_fees", "is_buyer"],
+      args: ["taker", "0x345", "amount", "fees", "base_fees", "is_buyer"],
     };
     const trade2 = {
       blockNumber: 79,
-      args: ["taker", "orderHash", "amount", "fees", "base_fees", "is_buyer"],
+      args: ["taker", "0x3456", "amount", "fees", "base_fees", "is_buyer"],
     };
-    const cancel1 = { args: ["orderHash"] };
-    const cancel2 = { args: ["orderHash"] };
+    const cancel1 = { args: ["0x345"] };
+    const cancel2 = { args: ["0x3456"] };
 
     readFileMock.mockReturnValue(initialBlock);
     getBlockMock.mockReturnValue(
