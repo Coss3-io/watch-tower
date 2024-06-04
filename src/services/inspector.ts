@@ -114,7 +114,6 @@ export class Inspector {
           const response = await axios.delete(apiUrl + watchTowerPath, {
             data: signData(data),
           });
-          console.log(response.data)
 
           if (response.status != axios.HttpStatusCode.Ok) {
             errors.push({
