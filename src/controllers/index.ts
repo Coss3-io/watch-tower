@@ -1,6 +1,12 @@
 import { Request, Response } from "express";
 import { ethers } from "ethers";
-import { apiUrl, chainRPC, erc20ABI, watchTowerVerificationPath } from "../configs";
+import {
+  apiUrl,
+  chainRPC,
+  dexContract,
+  erc20ABI,
+  watchTowerVerificationPath,
+} from "../configs";
 import BN from "bignumber.js";
 import axios from "axios";
 import { signData } from "../services";
@@ -26,18 +32,25 @@ export async function post(
   }
   const data = matchedData(req);
   const rpc = chainRPC[<keyof typeof chainRPC>data.chainId];
+  const dexAddress = dexContract[<keyof typeof chainRPC>data.chainId];
   const provider = new ethers.JsonRpcProvider(rpc);
   const erc20 = new ethers.Contract(data.token, erc20ABI, provider);
 
   let faultyOrders: { [key in string]: string } = {};
-  let promises: Promise<string>[] = [];
-  let result: string[] = [];
+  let balancesPromises: Promise<string>[] = [];
+  let allowancesPromises: Promise<string>[] = [];
+  let balances: string[] = [];
+  let allowances: string[] = [];
 
   try {
     data.orders.forEach((order: { address: string; amount: string }) => {
-      promises.push(erc20.balanceOf(order.address));
+      balancesPromises.push(erc20.balanceOf(order.address));
+      allowancesPromises.push(erc20.allowance(order.address, dexAddress));
     });
-    result = await Promise.all(promises);
+    [balances, allowances] = await Promise.all([
+      Promise.all(balancesPromises),
+      Promise.all(allowancesPromises),
+    ]);
   } catch (e: any) {
     console.log(
       "An error occured during balances retrieval from the blockchain"
@@ -48,11 +61,12 @@ export async function post(
     return;
   }
 
-  for (let i = 0; i < result.length; ++i) {
-    const balance = BN(result[i]);
+  for (let i = 0; i < balances.length; ++i) {
+    const balance = BN(balances[i]);
+    const allowance = BN(allowances[i]);
     const amount = BN(data.orders[i].amount);
-    if (balance.lt(amount)) {
-      faultyOrders[data.orders[i].address] = balance.toFixed();
+    if (balance.lt(amount) || allowance.lt(amount)) {
+      faultyOrders[data.orders[i].address] = BN.min(balance, allowance).toFixed();
     }
   }
 

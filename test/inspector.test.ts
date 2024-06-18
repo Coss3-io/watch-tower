@@ -14,11 +14,13 @@ import {
   stackingPath,
   watchTowerPath,
 } from "../src/configs";
+import { signData } from "../src/services";
 
 const chainId = "1337";
 jest.mock("axios");
 jest.mock("ethers");
 jest.mock("fs");
+jest.useFakeTimers();
 
 const realEthers = jest.requireActual("ethers");
 const mockedEthers = ethers as jest.Mocked<typeof ethers>;
@@ -124,7 +126,7 @@ describe("Testing the inspector general behaviour", () => {
     expect(mockedAxios.post).toHaveBeenNthCalledWith(
       1,
       apiUrl + watchTowerPath,
-      {
+      signData({
         taker: trade1.args[0],
         block: trade1.blockNumber,
         trades: {
@@ -135,13 +137,13 @@ describe("Testing the inspector general behaviour", () => {
             is_buyer: !trade1.args[5],
           },
         },
-      }
+      })
     );
 
     expect(mockedAxios.post).toHaveBeenNthCalledWith(
       2,
       apiUrl + watchTowerPath,
-      {
+      signData({
         taker: trade2.args[0],
         block: trade2.blockNumber,
         trades: {
@@ -152,28 +154,28 @@ describe("Testing the inspector general behaviour", () => {
             is_buyer: !trade2.args[5],
           },
         },
-      }
+      })
     );
     expect(mockedAxios.delete).toHaveBeenNthCalledWith(
       1,
       apiUrl + watchTowerPath,
       {
-        data: {
+        data: signData({
           orderHash: cancel1.args[0],
           baseToken: cancel1.args[1],
           quoteToken: cancel1.args[2],
-        },
+        }),
       }
     );
     expect(mockedAxios.delete).toHaveBeenNthCalledWith(
       2,
       apiUrl + watchTowerPath,
       {
-        data: {
+        data: signData({
           orderHash: cancel2.args[0],
           baseToken: cancel2.args[1],
           quoteToken: cancel2.args[2],
-        },
+        }),
       }
     );
 
@@ -221,21 +223,30 @@ describe("Testing the inspector general behaviour", () => {
       initialBlock,
       Math.min(actualBlock, parseInt(String(initialBlock)) + 4000)
     );
-    expect(mockedAxios.post).toHaveBeenNthCalledWith(1, apiUrl + stackingPath, {
-      withdraw: false,
-      slot: deposit1.args[0],
-      amount: deposit1.args[1],
-      address: deposit1.args[2],
-      chain_id: parseInt(chainId),
-    });
 
-    expect(mockedAxios.post).toHaveBeenNthCalledWith(2, apiUrl + stackingPath, {
-      withdraw: false,
-      slot: deposit2.args[0],
-      amount: deposit2.args[1],
-      address: deposit2.args[2],
-      chain_id: parseInt(chainId),
-    });
+    expect(mockedAxios.post).toHaveBeenNthCalledWith(
+      1,
+      apiUrl + stackingPath,
+      signData({
+        address: deposit1.args[2],
+        amount: deposit1.args[1],
+        slot: deposit1.args[0],
+        chain_id: parseInt(chainId),
+        withdraw: false,
+      })
+    );
+
+    expect(mockedAxios.post).toHaveBeenNthCalledWith(
+      2,
+      apiUrl + stackingPath,
+      signData({
+        address: deposit2.args[2],
+        amount: deposit2.args[1],
+        slot: deposit2.args[0],
+        chain_id: parseInt(chainId),
+        withdraw: false,
+      })
+    );
 
     expect(writeFileMock).toHaveBeenLastCalledWith(
       `blocks/stacking/${chainId}.txt`,
@@ -281,21 +292,29 @@ describe("Testing the inspector general behaviour", () => {
       initialBlock,
       Math.min(actualBlock, parseInt(String(initialBlock)) + 4000)
     );
-    expect(mockedAxios.post).toHaveBeenNthCalledWith(1, apiUrl + stackingPath, {
-      withdraw: true,
-      slot: withdrawal1.args[0],
-      amount: withdrawal1.args[1],
-      address: withdrawal1.args[2],
-      chain_id: parseInt(chainId),
-    });
+    expect(mockedAxios.post).toHaveBeenNthCalledWith(
+      1,
+      apiUrl + stackingPath,
+      signData({
+        address: withdrawal1.args[2],
+        amount: withdrawal1.args[1],
+        slot: withdrawal1.args[0],
+        chain_id: parseInt(chainId),
+        withdraw: true,
+      })
+    );
 
-    expect(mockedAxios.post).toHaveBeenNthCalledWith(2, apiUrl + stackingPath, {
-      withdraw: true,
-      slot: withdrawal2.args[0],
-      amount: withdrawal2.args[1],
-      address: withdrawal2.args[2],
-      chain_id: parseInt(chainId),
-    });
+    expect(mockedAxios.post).toHaveBeenNthCalledWith(
+      2,
+      apiUrl + stackingPath,
+      signData({
+        address: withdrawal2.args[2],
+        amount: withdrawal2.args[1],
+        slot: withdrawal2.args[0],
+        chain_id: parseInt(chainId),
+        withdraw: true,
+      })
+    );
 
     expect(writeFileMock).toHaveBeenLastCalledWith(
       `blocks/stacking/${chainId}.txt`,
@@ -344,23 +363,23 @@ describe("Testing the inspector general behaviour", () => {
     expect(mockedAxios.post).toHaveBeenNthCalledWith(
       1,
       apiUrl + stackingFeesPath,
-      {
-        slot: fees1.args[0],
-        amount: fees1.args[1],
+      signData({
         token: fees1.args[2],
+        amount: fees1.args[1],
+        slot: fees1.args[0],
         chain_id: parseInt(chainId),
-      }
+      })
     );
 
     expect(mockedAxios.post).toHaveBeenNthCalledWith(
       2,
       apiUrl + stackingFeesPath,
-      {
-        slot: fees2.args[0],
-        amount: fees2.args[1],
+      signData({
         token: fees2.args[2],
+        amount: fees2.args[1],
+        slot: fees2.args[0],
         chain_id: parseInt(chainId),
-      }
+      })
     );
 
     expect(writeFileMock).toHaveBeenLastCalledWith(
@@ -410,45 +429,45 @@ describe("Testing the inspector general behaviour", () => {
     expect(mockedAxios.post).toHaveBeenNthCalledWith(
       1,
       apiUrl + stackingFeesWithdrawalPath,
-      {
-        slot: fees1.args[0],
+      signData({
         address: fees1.args[1],
         token: fees1.args[2][0],
+        slot: fees1.args[0],
         chain_id: parseInt(chainId),
-      }
+      })
     );
 
     expect(mockedAxios.post).toHaveBeenNthCalledWith(
       2,
       apiUrl + stackingFeesWithdrawalPath,
-      {
-        slot: fees1.args[0],
+      signData({
         address: fees1.args[1],
         token: fees1.args[2][1],
+        slot: fees1.args[0],
         chain_id: parseInt(chainId),
-      }
+      })
     );
 
     expect(mockedAxios.post).toHaveBeenNthCalledWith(
       3,
       apiUrl + stackingFeesWithdrawalPath,
-      {
-        slot: fees2.args[0],
+      signData({
         address: fees2.args[1],
         token: fees2.args[2][0],
+        slot: fees2.args[0],
         chain_id: parseInt(chainId),
-      }
+      })
     );
 
     expect(mockedAxios.post).toHaveBeenNthCalledWith(
       4,
       apiUrl + stackingFeesWithdrawalPath,
-      {
-        slot: fees2.args[0],
+      signData({
         address: fees2.args[1],
         token: fees2.args[2][1],
+        slot: fees2.args[0],
         chain_id: parseInt(chainId),
-      }
+      })
     );
 
     expect(writeFileMock).toHaveBeenLastCalledWith(
@@ -665,20 +684,24 @@ describe("Testing the inspector general behaviour", () => {
         {
           path: apiUrl + stackingPath,
           method: "post",
-          address: deposit1.args[2],
-          withdraw: false,
-          amount: deposit1.args[1],
-          slot: deposit1.args[0],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: deposit1.args[2],
+            amount: deposit1.args[1],
+            slot: deposit1.args[0],
+            chain_id: parseInt(chainId),
+            withdraw: false,
+          })
         },
         {
           path: apiUrl + stackingPath,
           method: "post",
-          address: deposit2.args[2],
-          withdraw: false,
-          amount: deposit2.args[1],
-          slot: deposit2.args[0],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: deposit2.args[2],
+            amount: deposit2.args[1],
+            slot: deposit2.args[0],
+            chain_id: parseInt(chainId),
+            withdraw: false,
+          })
         },
       ]) + "\n"
     );
@@ -726,38 +749,46 @@ describe("Testing the inspector general behaviour", () => {
         {
           path: apiUrl + stackingPath,
           method: "post",
-          address: deposit1.args[2],
-          withdraw: false,
-          amount: deposit1.args[1],
-          slot: deposit1.args[0],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: deposit1.args[2],
+            amount: deposit1.args[1],
+            slot: deposit1.args[0],
+            chain_id: parseInt(chainId),
+            withdraw: false,
+          })
         },
         {
           path: apiUrl + stackingPath,
           method: "post",
-          address: deposit2.args[2],
-          withdraw: false,
-          amount: deposit2.args[1],
-          slot: deposit2.args[0],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: deposit2.args[2],
+            amount: deposit2.args[1],
+            slot: deposit2.args[0],
+            chain_id: parseInt(chainId),
+            withdraw: false,
+          })
         },
         {
           path: apiUrl + stackingPath,
           method: "post",
-          address: withdraw1.args[2],
-          withdraw: true,
-          amount: withdraw1.args[1],
-          slot: withdraw1.args[0],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: withdraw1.args[2],
+            amount: withdraw1.args[1],
+            slot: withdraw1.args[0],
+            chain_id: parseInt(chainId),
+            withdraw: true,
+          })
         },
         {
           path: apiUrl + stackingPath,
           method: "post",
-          address: withdraw2.args[2],
-          withdraw: true,
-          amount: withdraw2.args[1],
-          slot: withdraw2.args[0],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: withdraw2.args[2],
+            amount: withdraw2.args[1],
+            slot: withdraw2.args[0],
+            chain_id: parseInt(chainId),
+            withdraw: true,
+          })
         },
       ]) + "\n"
     );
@@ -813,54 +844,66 @@ describe("Testing the inspector general behaviour", () => {
         {
           path: apiUrl + stackingPath,
           method: "post",
-          address: deposit1.args[2],
-          withdraw: false,
-          amount: deposit1.args[1],
-          slot: deposit1.args[0],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: deposit1.args[2],
+            amount: deposit1.args[1],
+            slot: deposit1.args[0],
+            chain_id: parseInt(chainId),
+            withdraw: false,
+          })
         },
         {
           path: apiUrl + stackingPath,
           method: "post",
-          address: deposit2.args[2],
-          withdraw: false,
-          amount: deposit2.args[1],
-          slot: deposit2.args[0],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: deposit2.args[2],
+            amount: deposit2.args[1],
+            slot: deposit2.args[0],
+            chain_id: parseInt(chainId),
+            withdraw: false,
+          })
         },
         {
           path: apiUrl + stackingPath,
           method: "post",
-          address: withdraw1.args[2],
-          withdraw: true,
-          amount: withdraw1.args[1],
-          slot: withdraw1.args[0],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: withdraw1.args[2],
+            amount: withdraw1.args[1],
+            slot: withdraw1.args[0],
+            chain_id: parseInt(chainId),
+            withdraw: true,
+          })
         },
         {
           path: apiUrl + stackingPath,
           method: "post",
-          address: withdraw2.args[2],
-          withdraw: true,
-          amount: withdraw2.args[1],
-          slot: withdraw2.args[0],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: withdraw2.args[2],
+            amount: withdraw2.args[1],
+            slot: withdraw2.args[0],
+            chain_id: parseInt(chainId),
+            withdraw: true,
+          })
         },
         {
           path: apiUrl + stackingFeesPath,
           method: "post",
-          slot: fees1.args[0],
-          token: fees1.args[2],
-          amount: fees1.args[1],
-          chain_id: parseInt(chainId),
+          ...signData({
+            token: fees1.args[2],
+            amount: fees1.args[1],
+            slot: fees1.args[0],
+            chain_id: parseInt(chainId),
+          })
         },
         {
           path: apiUrl + stackingFeesPath,
           method: "post",
-          slot: fees2.args[0],
-          token: fees2.args[2],
-          amount: fees2.args[1],
-          chain_id: parseInt(chainId),
+          ...signData({
+            token: fees2.args[2],
+            amount: fees2.args[1],
+            slot: fees2.args[0],
+            chain_id: parseInt(chainId),
+          })
         },
       ]) + "\n"
     );
@@ -924,86 +967,106 @@ describe("Testing the inspector general behaviour", () => {
         {
           path: apiUrl + stackingPath,
           method: "post",
-          address: deposit1.args[2],
-          withdraw: false,
-          amount: deposit1.args[1],
-          slot: deposit1.args[0],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: deposit1.args[2],
+            amount: deposit1.args[1],
+            slot: deposit1.args[0],
+            chain_id: parseInt(chainId),
+            withdraw: false,
+          })
         },
         {
           path: apiUrl + stackingPath,
           method: "post",
-          address: deposit2.args[2],
-          withdraw: false,
-          amount: deposit2.args[1],
-          slot: deposit2.args[0],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: deposit2.args[2],
+            amount: deposit2.args[1],
+            slot: deposit2.args[0],
+            chain_id: parseInt(chainId),
+            withdraw: false,
+          })
         },
         {
           path: apiUrl + stackingPath,
           method: "post",
-          address: withdraw1.args[2],
-          withdraw: true,
-          amount: withdraw1.args[1],
-          slot: withdraw1.args[0],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: withdraw1.args[2],
+            amount: withdraw1.args[1],
+            slot: withdraw1.args[0],
+            chain_id: parseInt(chainId),
+            withdraw: true,
+          })
         },
         {
           path: apiUrl + stackingPath,
           method: "post",
-          address: withdraw2.args[2],
-          withdraw: true,
-          amount: withdraw2.args[1],
-          slot: withdraw2.args[0],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: withdraw2.args[2],
+            amount: withdraw2.args[1],
+            slot: withdraw2.args[0],
+            chain_id: parseInt(chainId),
+            withdraw: true,
+          })
         },
         {
           path: apiUrl + stackingFeesPath,
           method: "post",
-          slot: fees1.args[0],
-          token: fees1.args[2],
-          amount: fees1.args[1],
-          chain_id: parseInt(chainId),
+          ...signData({
+            token: fees1.args[2],
+            amount: fees1.args[1],
+            slot: fees1.args[0],
+            chain_id: parseInt(chainId),
+          })
         },
         {
           path: apiUrl + stackingFeesPath,
           method: "post",
-          slot: fees2.args[0],
-          token: fees2.args[2],
-          amount: fees2.args[1],
-          chain_id: parseInt(chainId),
+          ...signData({
+            token: fees2.args[2],
+            amount: fees2.args[1],
+            slot: fees2.args[0],
+            chain_id: parseInt(chainId),
+          })
         },
         {
           path: apiUrl + stackingFeesWithdrawalPath,
           method: "post",
-          slot: fees1W.args[0],
-          address: fees1W.args[1],
-          token: fees1W.args[2][0],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: fees1W.args[1],
+            token: fees1W.args[2][0],
+            slot: fees1W.args[0],
+            chain_id: parseInt(chainId),
+          })
         },
         {
           path: apiUrl + stackingFeesWithdrawalPath,
           method: "post",
-          slot: fees1W.args[0],
-          address: fees1W.args[1],
-          token: fees1W.args[2][1],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: fees1W.args[1],
+            token: fees1W.args[2][1],
+            slot: fees1W.args[0],
+            chain_id: parseInt(chainId),
+          })
         },
         {
           path: apiUrl + stackingFeesWithdrawalPath,
           method: "post",
-          slot: fees2W.args[0],
-          address: fees2W.args[1],
-          token: fees2W.args[2][0],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: fees2W.args[1],
+            token: fees2W.args[2][0],
+            slot: fees2W.args[0],
+            chain_id: parseInt(chainId),
+          })
         },
         {
           path: apiUrl + stackingFeesWithdrawalPath,
           method: "post",
-          slot: fees2W.args[0],
-          address: fees2W.args[1],
-          token: fees2W.args[2][1],
-          chain_id: parseInt(chainId),
+          ...signData({
+            address: fees2W.args[1],
+            token: fees2W.args[2][1],
+            slot: fees2W.args[0],
+            chain_id: parseInt(chainId),
+          })
         },
       ]) + "\n"
     );

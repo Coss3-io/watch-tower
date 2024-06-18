@@ -14,9 +14,10 @@ import {
   WRONG_ORDERS,
 } from "../src/configs/messages";
 import BigNumber from "bignumber.js";
-import { apiUrl } from "../src/configs";
+import { apiUrl, chainRPC, dexContract, watchTowerVerificationPath } from "../src/configs";
 import { signData } from "../src/services";
 
+jest.useFakeTimers();
 jest.mock("axios");
 jest.mock("ethers");
 const realEthers = jest.requireActual("ethers");
@@ -28,8 +29,11 @@ mockedAxios.post.mockResolvedValue({});
 
 const rpcMock = jest.fn();
 const balanceMock = jest.fn();
+const allowanceMock = jest.fn();
 mockedEthers.JsonRpcProvider.mockImplementation(() => <any>rpcMock);
-mockedEthers.Contract.mockImplementation(() => <any>{ balanceOf: balanceMock });
+mockedEthers.Contract.mockImplementation(
+  () => <any>{ balanceOf: balanceMock, allowance: allowanceMock }
+);
 mockedEthers.getAddress.mockImplementation(realEthers.getAddress);
 
 const token1 = "0x4BBEEB066ED09B7AeD07bf39eEE0460DFA261525";
@@ -46,7 +50,7 @@ describe("Checks the error scenarios of the API", () => {
   test("A request with a body with an empty orders array should fail", async () => {
     const response = await request(app)
       .post("/verify")
-      .send({ token: token1, chainId: 56 });
+      .send({ token: token1, chainId: 1337 });
     expect(response.statusCode).toBe(400);
     expect(response.body).toHaveProperty("errors");
     expect(response.body.errors.length).toBe(3);
@@ -76,7 +80,7 @@ describe("Checks the error scenarios of the API", () => {
       .post("/verify")
       .send({
         orders: [{ address: token2, amount: new BigNumber("1e19").toFixed() }],
-        chainId: 56,
+        chainId: 1337,
       });
     expect(response.statusCode).toBe(400);
     expect(response.body).toHaveProperty("errors");
@@ -136,7 +140,7 @@ describe("Checks the error scenarios of the API", () => {
     const response = await request(app).post("/verify").send({
       orders: orders,
       token: token1,
-      chainId: 56,
+      chainId: 1337,
     });
 
     expect(response.statusCode).toBe(400);
@@ -156,7 +160,7 @@ describe("Checks the error scenarios of the API", () => {
     const response = await request(app).post("/verify").send({
       orders: orders,
       token: token1,
-      chainId: 56,
+      chainId: 1337,
     });
 
     expect(response.statusCode).toBe(400);
@@ -176,7 +180,7 @@ describe("Checks the error scenarios of the API", () => {
     const response = await request(app).post("/verify").send({
       orders: orders,
       token: token1,
-      chainId: 56,
+      chainId: 1337,
     });
 
     expect(response.statusCode).toBe(400);
@@ -242,7 +246,7 @@ describe("Checks the error scenarios of the API", () => {
 
   test("A request with a non string token should fail", async () => {
     const orders = [{ address: token2, amount: "45" }];
-    const chainId = "56";
+    const chainId = "1337";
     const token = 345;
     const response = await request(app).post("/verify").send({
       orders: orders,
@@ -271,7 +275,7 @@ describe("Checks the error scenarios of the API", () => {
 
   test("A request with a wrong token address should fail", async () => {
     const orders = [{ address: token2, amount: "45" }];
-    const chainId = "56";
+    const chainId = "1337";
     const token = token1 + "a";
     const response = await request(app).post("/verify").send({
       orders: orders,
@@ -292,9 +296,14 @@ describe("Checks the error scenarios of the API", () => {
 });
 
 describe("Checks the working scenarios of the API", () => {
+
+  beforeAll(() => {
+    allowanceMock.mockReturnValue("9999999");
+  })
+
   test("Checks a regular request works well and call the blockchain correctly", async () => {
     const orders = [{ address: token2, amount: "45" }];
-    const chainId = "56";
+    const chainId = "1337";
     const token = token1;
     balanceMock.mockReturnValue("72");
     const response = await request(app).post("/verify").send({
@@ -314,7 +323,7 @@ describe("Checks the working scenarios of the API", () => {
       { address: token2, amount: "58" },
       { address: token3, amount: "45" },
     ];
-    const chainId = "56";
+    const chainId = "1337";
     const token = token1;
     balanceMock.mockReturnValueOnce("56").mockReturnValueOnce("39");
     const response = await request(app).post("/verify").send({
@@ -326,13 +335,83 @@ describe("Checks the working scenarios of the API", () => {
     const faultyOrders = {
       [token2]: "56",
       [token3]: "39",
-    }
+    };
 
     expect(response.statusCode).toBe(200);
     expect(balanceMock).toHaveBeenNthCalledWith(1, token2);
     expect(balanceMock).toHaveBeenNthCalledWith(2, token3);
     expect(axios.post).toHaveBeenCalledWith(
-      apiUrl,
+      apiUrl + watchTowerVerificationPath,
+      signData({ orders: faultyOrders, token: token })
+    );
+    expect(response.body).toEqual(faultyOrders);
+  });
+
+  test("Checks a regular insuffient allowance is handled correcly", async () => {
+    balanceMock.mockReset();
+    allowanceMock.mockReset();
+    const orders = [
+      { address: token2, amount: "58" },
+      { address: token3, amount: "45" },
+    ];
+    const chainId = "1337";
+    const token = token1;
+    const dexAddress = dexContract[<keyof typeof chainRPC>chainId];
+    balanceMock.mockReturnValueOnce("9999").mockReturnValueOnce("9999");
+    allowanceMock.mockReturnValueOnce("51").mockReturnValueOnce("32");
+    const response = await request(app).post("/verify").send({
+      orders: orders,
+      token: token,
+      chainId: chainId,
+    });
+
+    const faultyOrders = {
+      [token2]: "51",
+      [token3]: "32",
+    };
+
+    expect(response.statusCode).toBe(200);
+    expect(balanceMock).toHaveBeenNthCalledWith(1, token2);
+    expect(balanceMock).toHaveBeenNthCalledWith(2, token3);
+    expect(allowanceMock).toHaveBeenNthCalledWith(1, token2, dexAddress);
+    expect(allowanceMock).toHaveBeenNthCalledWith(2, token3, dexAddress);
+    expect(axios.post).toHaveBeenCalledWith(
+      apiUrl + watchTowerVerificationPath,
+      signData({ orders: faultyOrders, token: token })
+    );
+    expect(response.body).toEqual(faultyOrders);
+  });
+
+  test("Checks a regular insuffient allowance & balance is handled correcly", async () => {
+    balanceMock.mockReset();
+    allowanceMock.mockReset();
+    const orders = [
+      { address: token2, amount: "58" },
+      { address: token3, amount: "45" },
+    ];
+    const chainId = "1337";
+    const token = token1;
+    const dexAddress = dexContract[<keyof typeof chainRPC>chainId];
+    balanceMock.mockReturnValueOnce("55").mockReturnValueOnce("37");
+    allowanceMock.mockReturnValueOnce("51").mockReturnValueOnce("32");
+    const response = await request(app).post("/verify").send({
+      orders: orders,
+      token: token,
+      chainId: chainId,
+    });
+
+    const faultyOrders = {
+      [token2]: "51",
+      [token3]: "32",
+    };
+
+    expect(response.statusCode).toBe(200);
+    expect(balanceMock).toHaveBeenNthCalledWith(1, token2);
+    expect(balanceMock).toHaveBeenNthCalledWith(2, token3);
+    expect(allowanceMock).toHaveBeenNthCalledWith(1, token2, dexAddress);
+    expect(allowanceMock).toHaveBeenNthCalledWith(2, token3, dexAddress);
+    expect(axios.post).toHaveBeenCalledWith(
+      apiUrl + watchTowerVerificationPath,
       signData({ orders: faultyOrders, token: token })
     );
     expect(response.body).toEqual(faultyOrders);
@@ -345,7 +424,7 @@ describe("Checks the working scenarios of the API", () => {
       { address: token2, amount: "58" },
       { address: token3, amount: "45" },
     ];
-    const chainId = "56";
+    const chainId = "1337";
     const token = token1;
     balanceMock.mockImplementation(() => {
       throw new Error("Network error");

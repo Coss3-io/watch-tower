@@ -90,7 +90,7 @@ export class Inspector {
             },
           };
           const path = apiUrl + watchTowerPath;
-          const response = await axios.post(path, data);
+          const response = await axios.post(path, signData(data));
 
           if (response.status != axios.HttpStatusCode.Ok) {
             errors.push({
@@ -180,13 +180,13 @@ export class Inspector {
         async (depositEvent) => {
           if ("args" in depositEvent) {
             const path = apiUrl + stackingPath;
-            const data = {
+            const data = signData({
               address: depositEvent.args[2],
-              withdraw: false,
               amount: depositEvent.args[1],
               slot: depositEvent.args[0],
               chain_id: parseInt(this.chainId),
-            };
+              withdraw: false,
+            });
 
             const response = await axios.post(path, data);
             if (response.status != axios.HttpStatusCode.Ok) {
@@ -204,13 +204,13 @@ export class Inspector {
         async (withdrawEvent) => {
           if ("args" in withdrawEvent) {
             const path = apiUrl + stackingPath;
-            const data = {
+            const data = signData({
               address: withdrawEvent.args[2],
-              withdraw: true,
               amount: withdrawEvent.args[1],
               slot: withdrawEvent.args[0],
               chain_id: parseInt(this.chainId),
-            };
+              withdraw: true,
+            });
 
             const response = await axios.post(path, data);
             if (response.status != axios.HttpStatusCode.Ok) {
@@ -227,12 +227,12 @@ export class Inspector {
       const feesDeposit = feesDepositEvents.map(async (feeDepositEvent) => {
         if ("args" in feeDepositEvent) {
           const path = apiUrl + stackingFeesPath;
-          const data = {
-            slot: feeDepositEvent.args[0],
+          const data = signData({
             token: feeDepositEvent.args[2],
             amount: feeDepositEvent.args[1],
+            slot: feeDepositEvent.args[0],
             chain_id: parseInt(this.chainId),
-          };
+          });
           const response = await axios.post(path, data);
           if (response.status != axios.HttpStatusCode.Ok) {
             errors.push({
@@ -249,12 +249,12 @@ export class Inspector {
           if ("args" in feesWithdrawalEvent) {
             feesWithdrawalEvent.args[2].forEach(async (token: string) => {
               const path = apiUrl + stackingFeesWithdrawalPath;
-              const data = {
-                slot: feesWithdrawalEvent.args[0],
+              const data = signData({
                 address: feesWithdrawalEvent.args[1],
                 token: token,
+                slot: feesWithdrawalEvent.args[0],
                 chain_id: parseInt(this.chainId),
-              };
+              });
 
               const response = await axios.post(path, data);
               if (response.status != axios.HttpStatusCode.Ok) {
