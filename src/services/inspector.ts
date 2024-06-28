@@ -68,30 +68,37 @@ export class Inspector {
         block + 4000
       );
 
-      if (block == lastBlock) return true;
+      if (block == lastBlock) {
+        this._tradeLock = false;
+        return true;
+      }
 
       const [tradeEvents, cancelEvents] = await Promise.all([
-        this._dexContract.queryFilter("NewTrade", block, lastBlock),
-        this._dexContract.queryFilter("Cancel", block, lastBlock),
+        this._dexContract.queryFilter("NewTrade", block + 1, lastBlock),
+        this._dexContract.queryFilter("Cancel", block + 1, lastBlock),
       ]);
 
       const trades = tradeEvents.map(async (tradeEvent) => {
+        console.log(tradeEvent);
         if ("args" in tradeEvent) {
-          const data = {
+          const data = signData({
             taker: tradeEvent.args[0],
             block: tradeEvent.blockNumber,
             trades: {
-              [tradeEvent.args[1]]: {
-                amount: tradeEvent.args[2],
-                fees: tradeEvent.args[3],
-                base_fees: tradeEvent.args[4],
-                is_buyer: !tradeEvent.args[5],
-              },
+              ["0x" +
+              new BigNumber(tradeEvent.args[1]).toString(16).padStart(64, "0")]:
+                {
+                  amount: new BigNumber(tradeEvent.args[2]).toFixed(),
+                  fees: new BigNumber(tradeEvent.args[3]).toFixed(),
+                  base_fees: tradeEvent.args[4],
+                  is_buyer: parseInt(tradeEvent.args[5]) == 0,
+                },
             },
-          };
+          });
+          console.log(data);
           const path = apiUrl + watchTowerPath;
-          const response = await axios.post(path, signData(data));
-
+          const response = await axios.post(path, data);
+          console.log(response.data);
           if (response.status != axios.HttpStatusCode.Ok) {
             errors.push({
               path: path,
@@ -106,7 +113,9 @@ export class Inspector {
       const cancel = cancelEvents.map(async (cancelEvent) => {
         if ("args" in cancelEvent) {
           const data = {
-            orderHash: "0x" + new BigNumber(cancelEvent.args[0]).toString(16),
+            orderHash:
+              "0x" +
+              new BigNumber(cancelEvent.args[0]).toString(16).padStart(64, "0"),
             baseToken: cancelEvent.args[1],
             quoteToken: cancelEvent.args[2],
           };
@@ -182,8 +191,8 @@ export class Inspector {
             const path = apiUrl + stackingPath;
             const data = signData({
               address: depositEvent.args[2],
-              amount: depositEvent.args[1],
-              slot: depositEvent.args[0],
+              amount: new BigNumber(depositEvent.args[1]).toFixed(),
+              slot: new BigNumber(depositEvent.args[0]).toFixed(),
               chain_id: parseInt(this.chainId),
               withdraw: false,
             });
@@ -206,8 +215,8 @@ export class Inspector {
             const path = apiUrl + stackingPath;
             const data = signData({
               address: withdrawEvent.args[2],
-              amount: withdrawEvent.args[1],
-              slot: withdrawEvent.args[0],
+              amount: new BigNumber(withdrawEvent.args[1]).toFixed(),
+              slot: new BigNumber(withdrawEvent.args[0]).toFixed(),
               chain_id: parseInt(this.chainId),
               withdraw: true,
             });
@@ -229,8 +238,8 @@ export class Inspector {
           const path = apiUrl + stackingFeesPath;
           const data = signData({
             token: feeDepositEvent.args[2],
-            amount: feeDepositEvent.args[1],
-            slot: feeDepositEvent.args[0],
+            amount: new BigNumber(feeDepositEvent.args[1]).toFixed(),
+            slot: new BigNumber(feeDepositEvent.args[0]).toFixed(),
             chain_id: parseInt(this.chainId),
           });
           const response = await axios.post(path, data);
@@ -252,7 +261,7 @@ export class Inspector {
               const data = signData({
                 address: feesWithdrawalEvent.args[1],
                 token: token,
-                slot: feesWithdrawalEvent.args[0],
+                slot: new BigNumber(feesWithdrawalEvent.args[0]).toFixed(),
                 chain_id: parseInt(this.chainId),
               });
 
