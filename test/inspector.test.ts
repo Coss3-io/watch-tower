@@ -87,11 +87,11 @@ describe("Testing the inspector general behaviour", () => {
     const actualBlock = 75;
     const trade1 = {
       blockNumber: 78,
-      args: ["taker", "0x345", "amount", "fees", "base_fees", "is_buyer"],
+      args: ["taker", "0x345", "456", "123", false, 1],
     };
     const trade2 = {
       blockNumber: 79,
-      args: ["taker", "0x346", "amount", "fees", "base_fees", "is_buyer"],
+      args: ["taker", "0x346", "457", "124", true, 0],
     };
     const cancel1 = { args: ["0x345", "baseToken", "quoteToken"] };
     const cancel2 = { args: ["0x346", "baseToken", "quoteToken"] };
@@ -130,7 +130,7 @@ describe("Testing the inspector general behaviour", () => {
         taker: trade1.args[0],
         block: trade1.blockNumber,
         trades: {
-          [trade1.args[1]]: {
+          [String(trade1.args[1])]: {
             amount: trade1.args[2],
             fees: trade1.args[3],
             base_fees: trade1.args[4],
@@ -147,7 +147,7 @@ describe("Testing the inspector general behaviour", () => {
         taker: trade2.args[0],
         block: trade2.blockNumber,
         trades: {
-          [trade2.args[1]]: {
+          [String(trade2.args[1])]: {
             amount: trade2.args[2],
             fees: trade2.args[3],
             base_fees: trade2.args[4],
@@ -197,7 +197,7 @@ describe("Testing the inspector general behaviour", () => {
     };
     const deposit2 = {
       blockNumber: 78,
-      args: ["slot", "amount", "deposit2Address"],
+      args: ["46", "356456", "deposit2Address"],
     };
 
     readFileMock.mockReturnValue(initialBlock);
@@ -266,7 +266,7 @@ describe("Testing the inspector general behaviour", () => {
     };
     const withdrawal2 = {
       blockNumber: 78,
-      args: ["slot", "amount", "withdrawal2Address"],
+      args: ["53", "123", "withdrawal2Address"],
     };
 
     readFileMock.mockReturnValue(initialBlock);
@@ -330,11 +330,11 @@ describe("Testing the inspector general behaviour", () => {
 
     const fees1 = {
       blockNumber: 781,
-      args: ["slot1", "feesAmount1", "feesToken1"],
+      args: ["345", "24563", "feesToken1"],
     };
     const fees2 = {
       blockNumber: 784,
-      args: ["slot2", "feesAmount2", "feesToken2"],
+      args: ["245", "5454", "feesToken2"],
     };
 
     readFileMock.mockReturnValue(initialBlock);
@@ -396,11 +396,11 @@ describe("Testing the inspector general behaviour", () => {
 
     const fees1 = {
       blockNumber: 7811,
-      args: ["slot1", "address1", ["feesToken11", "feesToken12"]],
+      args: ["23", "address1", ["feesToken11", "feesToken12"]],
     };
     const fees2 = {
       blockNumber: 7842,
-      args: ["slot2", "address2", ["feesToken21", "feesToken22"]],
+      args: ["42", "address2", ["feesToken21", "feesToken22"]],
     };
 
     readFileMock.mockReturnValue(initialBlock);
@@ -498,14 +498,12 @@ describe("Testing the inspector general behaviour", () => {
     const actualBlock = 75;
     const trade1 = {
       blockNumber: 78,
-      args: ["taker", "orderHash", "amount", "fees", "base_fees", "is_buyer"],
+      args: ["taker", "0x34566", "255727", "5727", true, 0],
     };
     const trade2 = {
       blockNumber: 79,
-      args: ["taker", "orderHash", "amount", "fees", "base_fees", "is_buyer"],
+      args: ["taker", "0x35987", "425727", "2452", false, 0],
     };
-    const cancel1 = { args: ["orderHash"] };
-    const cancel2 = { args: ["orderHash"] };
 
     readFileMock.mockReturnValue(initialBlock);
     getBlockMock.mockReturnValue(
@@ -528,31 +526,35 @@ describe("Testing the inspector general behaviour", () => {
           path: apiUrl + watchTowerPath,
           method: "post",
           chain_id: chainId,
-          taker: trade1.args[0],
-          block: trade1.blockNumber,
-          trades: {
-            [trade1.args[1]]: {
-              amount: trade1.args[2],
-              fees: trade1.args[3],
-              base_fees: trade1.args[4],
-              is_buyer: !trade1.args[5],
+          ...signData({
+            taker: trade1.args[0],
+            block: trade1.blockNumber,
+            trades: {
+              [String(trade1.args[1])]: {
+                amount: trade1.args[2],
+                fees: trade1.args[3],
+                base_fees: trade1.args[4],
+                is_buyer: !trade1.args[5],
+              },
             },
-          },
+          }),
         },
         {
           path: apiUrl + watchTowerPath,
           method: "post",
           chain_id: chainId,
-          taker: trade2.args[0],
-          block: trade2.blockNumber,
-          trades: {
-            [trade2.args[1]]: {
-              amount: trade2.args[2],
-              fees: trade2.args[3],
-              base_fees: trade2.args[4],
-              is_buyer: !trade2.args[5],
+          ...signData({
+            taker: trade2.args[0],
+            block: trade2.blockNumber,
+            trades: {
+              [String(trade2.args[1])]: {
+                amount: trade2.args[2],
+                fees: trade2.args[3],
+                base_fees: trade2.args[4],
+                is_buyer: !trade2.args[5],
+              },
             },
-          },
+          }),
         },
       ]) + "\n"
     );
@@ -564,11 +566,11 @@ describe("Testing the inspector general behaviour", () => {
     const actualBlock = 75;
     const trade1 = {
       blockNumber: 78,
-      args: ["taker", "0x345", "amount", "fees", "base_fees", "is_buyer"],
+      args: ["taker", "0x345", "65464", "651661", true, 1],
     };
     const trade2 = {
       blockNumber: 79,
-      args: ["taker", "0x3456", "amount", "fees", "base_fees", "is_buyer"],
+      args: ["taker", "0x3456", "1545", "66656", true, 1],
     };
     const cancel1 = { args: ["0x345"] };
     const cancel2 = { args: ["0x3456"] };
@@ -594,31 +596,35 @@ describe("Testing the inspector general behaviour", () => {
           path: apiUrl + watchTowerPath,
           method: "post",
           chain_id: chainId,
-          taker: trade1.args[0],
-          block: trade1.blockNumber,
-          trades: {
-            [trade1.args[1]]: {
-              amount: trade1.args[2],
-              fees: trade1.args[3],
-              base_fees: trade1.args[4],
-              is_buyer: !trade1.args[5],
+          ...signData({
+            taker: trade1.args[0],
+            block: trade1.blockNumber,
+            trades: {
+              [String(trade1.args[1])]: {
+                amount: trade1.args[2],
+                fees: trade1.args[3],
+                base_fees: trade1.args[4],
+                is_buyer: !trade1.args[5],
+              },
             },
-          },
+          }),
         },
         {
           path: apiUrl + watchTowerPath,
           method: "post",
           chain_id: chainId,
-          taker: trade2.args[0],
-          block: trade2.blockNumber,
-          trades: {
-            [trade2.args[1]]: {
-              amount: trade2.args[2],
-              fees: trade2.args[3],
-              base_fees: trade2.args[4],
-              is_buyer: !trade2.args[5],
+          ...signData({
+            taker: trade2.args[0],
+            block: trade2.blockNumber,
+            trades: {
+              [String(trade2.args[1])]: {
+                amount: trade2.args[2],
+                fees: trade2.args[3],
+                base_fees: trade2.args[4],
+                is_buyer: !trade2.args[5],
+              },
             },
-          },
+          }),
         },
         {
           path: apiUrl + watchTowerPath,
@@ -662,7 +668,7 @@ describe("Testing the inspector general behaviour", () => {
     };
     const deposit2 = {
       blockNumber: 78,
-      args: ["slot", "amount", "deposit2Address"],
+      args: ["46", "87894", "deposit2Address"],
     };
 
     readFileMock.mockReturnValue(initialBlock);
@@ -718,7 +724,7 @@ describe("Testing the inspector general behaviour", () => {
     };
     const deposit2 = {
       blockNumber: 78,
-      args: ["slot", "amount", "deposit2Address"],
+      args: ["797", "5424", "deposit2Address"],
     };
 
     const withdraw1 = {
@@ -727,7 +733,7 @@ describe("Testing the inspector general behaviour", () => {
     };
     const withdraw2 = {
       blockNumber: 788,
-      args: ["slot", "amount", "withdraw2Address"],
+      args: ["43572", "453747", "withdraw2Address"],
     };
 
     readFileMock.mockReturnValue(initialBlock);
@@ -805,7 +811,7 @@ describe("Testing the inspector general behaviour", () => {
     };
     const deposit2 = {
       blockNumber: 78,
-      args: ["slot", "amount", "deposit2Address"],
+      args: ["2545", "5273", "deposit2Address"],
     };
 
     const withdraw1 = {
@@ -814,15 +820,15 @@ describe("Testing the inspector general behaviour", () => {
     };
     const withdraw2 = {
       blockNumber: 788,
-      args: ["slot", "amount", "withdraw2Address"],
+      args: ["4872", "43727", "withdraw2Address"],
     };
     const fees1 = {
       blockNumber: 781,
-      args: ["slot1", "feesAmount1", "feesToken1"],
+      args: ["2487", "425842", "feesToken1"],
     };
     const fees2 = {
       blockNumber: 784,
-      args: ["slot2", "feesAmount2", "feesToken2"],
+      args: ["4283", "45734", "feesToken2"],
     };
 
     readFileMock.mockReturnValue(initialBlock);
@@ -920,7 +926,7 @@ describe("Testing the inspector general behaviour", () => {
     };
     const deposit2 = {
       blockNumber: 78,
-      args: ["slot", "amount", "deposit2Address"],
+      args: ["9872", "9468", "deposit2Address"],
     };
 
     const withdraw1 = {
@@ -929,23 +935,23 @@ describe("Testing the inspector general behaviour", () => {
     };
     const withdraw2 = {
       blockNumber: 788,
-      args: ["slot", "amount", "withdraw2Address"],
+      args: ["3758", "743542", "withdraw2Address"],
     };
     const fees1 = {
       blockNumber: 781,
-      args: ["slot1", "feesAmount1", "feesToken1"],
+      args: ["2786", "15672", "feesToken1"],
     };
     const fees2 = {
       blockNumber: 784,
-      args: ["slot2", "feesAmount2", "feesToken2"],
+      args: ["2758", "344842", "feesToken2"],
     };
     const fees1W = {
       blockNumber: 7811,
-      args: ["slot1", "address1", ["feesToken11", "feesToken12"]],
+      args: ["3787", "address1", ["feesToken11", "feesToken12"]],
     };
     const fees2W = {
       blockNumber: 7842,
-      args: ["slot2", "address2", ["feesToken21", "feesToken22"]],
+      args: ["972733", "address2", ["feesToken21", "feesToken22"]],
     };
 
     readFileMock.mockReturnValue(initialBlock);
